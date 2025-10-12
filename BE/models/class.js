@@ -1,16 +1,15 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const Teacher = require("./teacher");
 
 const Class = sequelize.define("Class", {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  name: { type: DataTypes.STRING, allowNull: false }, // e.g., "Piano Beginner"
-  type: { type: DataTypes.STRING, allowNull: false }, // Piano, Guitar, Singing, etc.
-  duration: { type: DataTypes.INTEGER, allowNull: false }, // in minutes
-  price: { type: DataTypes.FLOAT, allowNull: false },
+  price: { type: DataTypes.FLOAT },
+  capacity: { type: DataTypes.INTEGER, defaultValue: 2 },
+  date: { type: DataTypes.DATEONLY, allowNull: false },
+  time: { type: DataTypes.STRING, allowNull: false },
 });
 
-// Relation to teacher (optional)
-Class.belongsTo(Teacher, { foreignKey: "teacherId" });
+// These will be added dynamically by Sequelize associations
+// teacherId and classTypeId will be created when you do associations
 
 module.exports = Class;

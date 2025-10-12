@@ -1,35 +1,23 @@
 const express = require("express");
-const dotenv = require("dotenv");
-const sequelize = require("./config/db");
-const Student = require("./models/student"); // import model
-
-dotenv.config();
 const app = express();
-
-app.use(express.json()); // for JSON requests
-
-// Routes
+const cors = require("cors");
+const { Teacher, Class, ClassType, Student } = require("./models"); // 🔹 import models with associations
+const sequelize = require("./config/db");
+const classTypesRoutes = require("./routes/classTypesRoutes");
 const studentRoutes = require("./routes/studentRoutes");
+const classesRoutes = require("./routes/classesRoutes");
+const teachersRoutes = require("./routes/teachersRoutes");
+app.use(cors());
+app.use(express.json());
+
 app.use("/api/students", studentRoutes);
+app.use("/api/classes", classesRoutes);
+app.use("/api/teachers", teachersRoutes);
+app.use("/api/class-types", classTypesRoutes);
 
-// Simple health check route
-app.get("/", (req, res) => {
-  res.send("Music Classes API is running 🎶");
+sequelize.sync({ force: true }).then(() => {
+  console.log("✅ Database synced");
+  app.listen(5000, () =>
+    console.log("Server running on http://localhost:5000")
+  );
 });
-
-// Import routes
-// const studentRoutes = require('./routes/studentRoutes');
-// app.use('/api/students', studentRoutes);
-
-// Connect DB and start server
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("✅ Database connected");
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => console.error("❌ DB connection error:", err));
