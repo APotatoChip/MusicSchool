@@ -3,6 +3,8 @@ const router = express.Router();
 const { Op } = require("sequelize");
 const Class = require("../models/class");
 const Student = require("../models/student");
+const Teacher = require("../models/teacher");
+const ClassType = require("../models/classType");
 const StudentClass = require("../models/studentClass");
 
 // GET /api/classes?date=YYYY-MM-DD
@@ -10,11 +12,47 @@ router.get("/", async (req, res) => {
   try {
     const { date } = req.query;
     const where = date ? { date } : {};
+
     const classes = await Class.findAll({
       where,
-      include: [{ model: Student }],
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "firstName", "lastName"],
+          through: { attributes: [] }, // Hide join table
+        },
+        {
+          model: Teacher,
+          attributes: ["id", "firstName", "lastName"],
+        },
+        {
+          model: ClassType,
+          attributes: ["id", "name"],
+        },
+      ],
     });
-    res.json(classes);
+
+    // ✅ Format the data for easier frontend use
+    const formattedClasses = classes.map((cls) => ({
+      id: cls.id,
+      date: cls.date,
+      time: cls.time,
+      price: cls.price,
+      capacity: cls.capacity,
+      teacherName: cls.Teacher
+        ? cls.Teacher.firstName
+          ? `${cls.Teacher.firstName} ${cls.Teacher.lastName}`
+          : cls.Teacher.name
+        : null,
+      classTypeName: cls.ClassType ? cls.ClassType.name : null,
+      students:
+        cls.Students?.map((s) => ({
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+        })) || [],
+    }));
+
+    res.json(formattedClasses);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error fetching classes" });
@@ -67,20 +105,36 @@ router.post("/", async (req, res) => {
   }
 });
 
-// DELETE /api/classes/:id/remove-student/:studentId
-router.delete("/:id/remove-student/:studentId", async (req, res) => {
+// DELETE /api/classes/:classId/students/:studentId → remove student from class
+router.delete("/:classId/students/:studentId", async (req, res) => {
   try {
-    const { id, studentId } = req.params;
-    const cls = await Class.findByPk(id);
-    const student = await Student.findByPk(studentId);
-    if (!cls || !student)
-      return res.status(404).json({ error: "Class or student not found" });
+    const { classId, studentId } = req.params;
+    console.log("hi");
+    const classObj = await Class.findByPk(classId);
+    if (!classObj) return res.status(404).json({ error: "Class not found" });
 
-    await cls.removeStudent(student);
-    res.json({ message: "Student removed successfully" });
+    const student = await Student.findByPk(studentId);
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    await classObj.removeStudent(student);
+
+    // Return the updated class with students
+    const updatedClass = await Class.findByPk(classId, {
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "firstName", "lastName"],
+          through: { attributes: [] },
+        },
+        { model: Teacher, attributes: ["id", "firstName", "lastName"] },
+        { model: ClassType, attributes: ["id", "name"] },
+      ],
+    });
+
+    res.json(updatedClass);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error removing student" });
+    res.status(500).json({ error: "Error removing student from class" });
   }
 });
 
