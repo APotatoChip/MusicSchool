@@ -71,7 +71,7 @@ router.post("/:id/add-student", async (req, res) => {
       return res.status(404).json({ error: "Class or student not found" });
 
     await cls.addStudent(student);
-    res.json({ message: "Student added successfully" });
+    res.json(student);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error adding student" });
@@ -131,7 +131,28 @@ router.delete("/:classId/students/:studentId", async (req, res) => {
       ],
     });
 
-    res.json(updatedClass);
+    const formattedClass = {
+      id: updatedClass.id,
+      date: updatedClass.date,
+      time: updatedClass.time,
+      price: updatedClass.price,
+      capacity: updatedClass.capacity,
+      teacherName: updatedClass.Teacher
+        ? updatedClass.Teacher.firstName
+          ? `${updatedClass.Teacher.firstName} ${updatedClass.Teacher.lastName}`
+          : updatedClass.Teacher.name
+        : null,
+      classTypeName: updatedClass.ClassType
+        ? updatedClass.ClassType.name
+        : null,
+      students:
+        updatedClass.Students?.map((s) => ({
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+        })) || [],
+    };
+
+    res.json(formattedClass);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error removing student from class" });

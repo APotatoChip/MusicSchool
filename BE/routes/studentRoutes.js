@@ -47,7 +47,8 @@ router.post("/", async (req, res) => {
     const cls = await Class.findByPk(id);
     const student = await Student.findByPk(studentId);
     await cls.addStudent(student);
-    res.json({ success: true });
+    console.log(student);
+    res.json(student);
   });
 });
 

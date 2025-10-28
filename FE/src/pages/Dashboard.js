@@ -87,14 +87,21 @@ export default function Dashboard() {
   const handleAddExistingStudent = async (student) => {
     if (!selectedClass) return;
     try {
-      await api.post(`/classes/${selectedClass.id}/add-student`, {
+      // 🟢 Send the request and wait for backend response
+      const res = await api.post(`/classes/${selectedClass.id}/add-student`, {
         studentId: student.id,
       });
+
+      const addedStudent = res.data; // ✅ this should be the actual student returned by backend
       setSuccess(true);
-      setSelectedClass({
-        ...selectedClass,
-        students: [...selectedClass.students, student],
-      });
+      const studentObj = addedStudent.get
+        ? addedStudent.get({ plain: true })
+        : addedStudent;
+
+      setSelectedClass((prev) => ({
+        ...prev,
+        students: [...(prev.students || []), addedStudent],
+      }));
     } catch (err) {
       console.error(err);
       setError("Грешка при добавяне на ученик към урока!");
@@ -134,9 +141,9 @@ export default function Dashboard() {
       const updated = await res.json();
       setSelectedClass(updated);
       // Optional: also refresh class list if you show summaries
-      setClasses((prev) =>
-        prev.map((c) => (c.id === updated.id ? updated : c))
-      );
+      // setClasses((prev) =>
+      //   prev.map((c) => (c.id === updated.id ? updated : c))
+      // );
     } catch (err) {
       console.error("Error removing student:", err);
     }
@@ -147,7 +154,6 @@ export default function Dashboard() {
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Днешни уроци
       </Typography>
-
       {/* ✅ Date Picker */}
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <DatePicker
@@ -157,7 +163,6 @@ export default function Dashboard() {
           sx={{ mb: 3 }}
         />
       </LocalizationProvider>
-
       {/* ✅ List of classes */}
       <Box display="grid" gap={2}>
         {classes.length === 0 ? (
@@ -173,7 +178,7 @@ export default function Dashboard() {
                   {cls.classTypeName} с {cls.teacherName}
                 </Typography>
                 <Typography>
-                  Час: {cls.time} — {cls.price} лв — 👥 {cls.students.length}/
+                  Час: {cls.time} — {cls.price} лв — 👥 {cls.students?.length}/
                   {cls.capacity}
                 </Typography>
               </CardContent>
@@ -181,7 +186,6 @@ export default function Dashboard() {
           ))
         )}
       </Box>
-
       {/* ✅ Class details modal */}
       <Dialog open={!!selectedClass} onClose={handleClose} fullWidth>
         <DialogTitle>
@@ -191,7 +195,7 @@ export default function Dashboard() {
           <Typography sx={{ mb: 2 }}>
             Час: {selectedClass?.time} <br />
             Цена: {selectedClass?.price} лв <br />
-            Капацитет: {selectedClass?.students.length}/
+            Капацитет: {selectedClass?.students?.length}/
             {selectedClass?.capacity}
           </Typography>
 
@@ -200,22 +204,27 @@ export default function Dashboard() {
           <Typography variant="subtitle1" fontWeight="bold">
             Ученици:
           </Typography>
-          <List dense>
-            {selectedClass?.students.map((s) => (
-              <ListItem key={s.id}>
-                <ListItemText primary={`${s.name}`} />
-                <IconButton
-                  edge="end"
-                  aria-label="delete"
-                  onClick={() => handleRemoveStudent(s.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </ListItem>
-            ))}
-            {selectedClass?.students.length === 0 && (
+          {selectedClass?.students && selectedClass.students.length > 0 ? (
+            <List dense>
+              {selectedClass?.students?.map((s) => (
+                <ListItem key={s.id}>
+                  <ListItemText
+                    primary={s.name ? s.name : `${s.firstName} ${s.lastName}`}
+                  />
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleRemoveStudent(s.id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            selectedClass?.students?.length === 0 && (
               <Typography>Няма добавени ученици.</Typography>
-            )}
-          </List>
+            )
+          )}
 
           <Divider sx={{ mt: 2, mb: 2 }} />
 
@@ -250,7 +259,6 @@ export default function Dashboard() {
           <Button onClick={handleClose}>Затвори</Button>
         </DialogActions>
       </Dialog>
-
       {/* ✅ New Student Modal */}
       <Dialog open={addStudentModal} onClose={() => setAddStudentModal(false)}>
         <DialogTitle>Добави нов ученик</DialogTitle>
